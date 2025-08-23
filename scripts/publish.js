@@ -3,6 +3,8 @@ const { execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
+const BRANCH = process.env.BRANCH;
+
 // Apply changesets if any -- e.g., coming from pre-release branches
 try {
   execSync("pnpm changeset pre exit");
@@ -12,7 +14,7 @@ try {
 try {
   execSync("pnpm changeset version");
   execSync(
-    `git add . && git commit -m "Apply changesets and update CHANGELOG" && git push origin ${process.env.BRANCH}`,
+    `git add . && git commit -m "Apply changesets and update CHANGELOG [skip ci]" && git push origin ${BRANCH}`,
   );
 } catch {
   // no changesets to be applied
@@ -34,13 +36,27 @@ const [newMajor, newMinor] = VERSION.split(".");
 const [oldMajor, oldMinor] = LATEST_VERSION.split(".");
 
 const isPatch = newMajor === oldMajor && newMinor === oldMinor;
+const releaseBranch = `release-${newMajor}.${newMinor}`;
 
-if (!isPatch) {
-  require("./update-security-md")(`${newMajor}.${newMinor}`, `${oldMajor}.${oldMinor}`);
-  /** Create new release branch for every Major or Minor release */
-  const releaseBranch = `release-${newMajor}.${newMinor}`;
-  execSync(`git checkout -b ${releaseBranch} && git push origin ${releaseBranch}`);
+if (isPatch) {
+  // update release branch
+  try {
+    execSync(
+      `git checkout ${releaseBranch} && git merge ${BRANCH} && git push origin ${releaseBranch}`,
+    );
+  } catch {}
+} else {
+  try {
+    require("./update-security-md")(`${newMajor}.${newMinor}`, `${oldMajor}.${oldMinor}`);
+    /** Create new release branch for every Major or Minor release */
+    execSync(`git checkout -b ${releaseBranch} && git push origin ${releaseBranch}`);
+  } catch (err) {
+    console.error("Error pushing to release branch: ", err);
+  }
 }
+
+const { visibility } = JSON.parse(execSync("gh repo view --json visibility").toString());
+const provenance = visibility.toLowerCase() === "public" ? "--provenance" : "";
 
 /** Create release */
 execSync("cd lib && pnpm build");

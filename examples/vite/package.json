@@ -8,14 +8,18 @@
     "clean": "rm -rf dist",
     "dev": "vite --host 0.0.0.0 --port 3001 --clearScreen false",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/"
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix"
   },
   "dependencies": {
     "@repo/shared": "workspace:*",
     "nextjs-themes": "workspace:*",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-router-dom": "^7.5.0"
+    "react-router-dom": "^7.5.0",
+    "nextjs-darkmode": "^1.0.10",
+    "react-mouse-trails": "^0.0.5",
+    "react18-themes": "^3.2.0"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

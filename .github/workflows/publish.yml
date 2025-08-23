@@ -15,6 +15,7 @@ jobs:
     permissions:
       contents: write
       id-token: write
+      actions: write
 
     steps:
       - uses: actions/checkout@v4
@@ -44,3 +45,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run docs workflow as it will fail when trying to make parallel updates
+        run: gh workflow run docs.yml
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

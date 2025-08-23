@@ -9,15 +9,18 @@ jobs:
   test:
     if: github.run_number != 1
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm i -g pnpm && pnpm i
+      - run: npm i -g pnpm && pnpm i --no-frozen-lockfile
         name: Install dependencies
       - name: Run unit tests
         run: pnpm test
+        working-directory: ./lib
       - name: Upload coverage reports to Codecov
         continue-on-error: true
         uses: codecov/codecov-action@v4

@@ -3,14 +3,18 @@ const path = require("node:path");
 const { prompt } = require("enquirer");
 const { execSync } = require("child_process");
 
+const config = require("./rebrand.config.json");
+
+const isFirstRebrand = config.repo === "turborepo-template" && config.owner === "react18-tools";
+
 const [owner, repo] = execSync(
-  'git remote get-url --push origin | sed "s/https:\\/\\/github.com\\///" | sed "s/.git//"',
+  'git remote get-url --push origin | sed "s/https:\\/\\/github.com\\///" | sed "s/https:\\/\\/[^@]*@github.com\\///" | sed "s/.git//"',
 )
   .toString()
   .trim()
   .split("/");
 
-const packageName = repo;
+const packageName = isFirstRebrand ? repo : config.packageName || repo;
 
 if (repo === "turborepo-template" && /(mayank1513|react18-tools)/.test(owner)) return; // silently ignore
 
@@ -33,6 +37,10 @@ if (repo === "turborepo-template" && /(mayank1513|react18-tools)/.test(owner)) r
       .forEach(cmd => execSync(cmd.trim()));
   }
 
+  const defaultInitialTitle = packageName
+    .split("-")
+    .map(w => w[0].toUpperCase() + w.slice(1))
+    .join(" ");
   const { installExt, ...answers } = await prompt([
     {
       type: "input",
@@ -54,6 +62,12 @@ if (repo === "turborepo-template" && /(mayank1513|react18-tools)/.test(owner)) r
       initial: repo,
     },
     {
+      type: "input",
+      name: "title",
+      message: "What is the title of your project?",
+      initial: isFirstRebrand ? defaultInitialTitle : config.title || defaultInitialTitle,
+    },
+    {
       type: "confirm",
       name: "installExt",
       message: "Do you want to install the recommended VS Code extensions?",
@@ -68,7 +82,7 @@ if (repo === "turborepo-template" && /(mayank1513|react18-tools)/.test(owner)) r
 
   fs.writeFileSync(
     path.resolve(process.cwd(), "scripts", "rebrand.config.json"),
-    JSON.stringify(answers, null, 2),
+    JSON.stringify(newConfig, null, 2),
   );
 
   execSync("node ./scripts/rebrander.js");

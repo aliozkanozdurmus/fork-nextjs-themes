@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const { packageName, owner, repo } = require("./rebrand.config.json");
+const { packageName, owner, repo, title } = require("./rebrand.config.json");
 const packageJSON = require("../lib/package.json");
 
 const rootDir = process.cwd();
@@ -20,6 +20,14 @@ packageJSON.funding.unshift({
   url: `https://github.com/sponsors/${owner}`,
 });
 packageJSON.keywords = packageJSON.keywords.slice(2);
+
+packageJSON.exports = {
+  ".": {
+    types: "./dist/index.d.ts",
+    import: "./dist/index.mjs",
+    require: "./dist/index.js",
+  },
+};
 
 fs.writeFileSync(
   path.resolve(rootDir, "lib", "package.json"),
@@ -62,10 +70,6 @@ try {
 }
 
 // Update README
-const title = packageName
-  .split("-")
-  .map(w => w[0].toUpperCase() + w.slice(1))
-  .join(" ");
 const readme = fs
   .readFileSync(path.resolve(rootDir, "lib", "README.md"), "utf-8")
   .replace(new RegExp(oldPkgName, "g"), packageName)
@@ -130,12 +134,15 @@ const updatePublishFlow = name => {
 updatePublishFlow("publish.yml");
 updatePublishFlow("manual-publish.yml");
 
-fs.unlinkSync(path.resolve(workflowsPath, "setup.yml"));
-
+try {
+  fs.rmSync(path.resolve(workflowsPath, "setup.yml"));
+} catch {
+  // empty
+}
 const docsWorkflowPath = path.resolve(workflowsPath, "docs.yml");
 fs.writeFileSync(
   docsWorkflowPath,
-  fs.readFileSync(docsWorkflowPath, "utf-8").replace(oldOwner, owner),
+  fs.readFileSync(docsWorkflowPath, "utf-8").replace(oldOwner, owner).replaceAll(oldRepo, repo),
 );
 
 // Update SECURITY.md
@@ -145,15 +152,12 @@ fs.writeFileSync(
   fs.readFileSync(secFile, "utf-8").replace(`${oldOwner}/${oldRepo}`, `${owner}/${repo}`),
 );
 // clean up
-const rootPackageJSON = require("../package.json");
 const { execSync } = require("child_process");
-delete rootPackageJSON.scripts.postinstall;
-try {
-  fs.writeFileSync(path.resolve(rootDir, "package.json"), JSON.stringify(rootPackageJSON, null, 2));
-} catch (e) {
-  console.error(e);
-}
 
+// update typedoc config
+execSync(`sed -i -e 's/name:.*/name: "${title.replace(/\//g, "\\/")}",/' typedoc.config.js`);
+
+console.log("\x1b[32m", "re-installing dependencies after updates...");
 // reinstall dependencies --> this will update the pnpm-lock file as well which we need to add to commit
 execSync("pnpm i");
 
